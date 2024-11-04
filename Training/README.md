@@ -37,6 +37,7 @@ We train our MOFA-Adapter on WebVid-10M. Please refer to our implementation of `
     |   `-- model_index.json
     ```
 
+
 2. Download the Unimatch checkpoint from [here](https://s3.eu-central-1.amazonaws.com/avg-projects/unimatch/pretrained/gmflow-scale2-regrefine6-mixdata-train320x576-4e7b215d.pth) and put it into `./train_utils/unimatch/pretrained`.
 
 3. Download the checkpoint of CMP from [here](https://huggingface.co/MyNiuuu/MOFA-Video-Traj/blob/main/models/cmp/experiments/semiauto_annot/resnet50_vip%2Bmpii_liteflow/checkpoints/ckpt_iter_42000.pth.tar) and put it into `./models/cmp/experiments/semiauto_annot/resnet50_vip+mpii_liteflow/checkpoints`.

@@ -34,8 +34,7 @@ def zero_rank_print(s):
 class WebVid10M(Dataset):
     def __init__(
             self,
-            meta_path='/apdcephfs/share_1290939/0_public_datasets/WebVid/metadata/results_2M_train.csv',
-            data_dir='/apdcephfs/share_1290939/0_public_datasets/WebVid',
+            meta_path='/home/tom/Open-Sora-dev/pose_traj_classes_2024-09-24_11-13-53_12_classes_intersect_pruned_5000_train.csv',
             sample_size=[256, 256], 
             sample_stride=1, 
             sample_n_frames=14,
@@ -43,11 +42,10 @@ class WebVid10M(Dataset):
         zero_rank_print(f"loading annotations from {meta_path} ...")
 
         metadata = pd.read_csv(meta_path)
-        metadata['caption'] = metadata['name']
-        del metadata['name']
+        metadata['caption'] = metadata['text']
+        del metadata['text']
         self.metadata = metadata
         self.metadata.dropna(inplace=True)
-        self.data_dir = data_dir
 
         self.length = len(self.metadata)
         print(f"data scale: {self.length}")
@@ -68,14 +66,12 @@ class WebVid10M(Dataset):
         ])
     
     def _get_video_path(self, sample):
-        rel_video_fp = os.path.join(sample['page_dir'], str(sample['videoid']) + '.mp4')
-        full_video_fp = os.path.join(self.data_dir, 'videos', rel_video_fp)
+        full_video_fp = sample['path']
+        rel_video_fp = '/'.join(full_video_fp.split('/')[2:])  # Remove top level folder
         return full_video_fp, rel_video_fp
     
     def get_batch(self, index):
-
         while True:
-
             index = index % len(self.metadata)
             sample = self.metadata.iloc[index]
             video_path, rel_path = self._get_video_path(sample)
@@ -100,7 +96,6 @@ class WebVid10M(Dataset):
             random_range = frame_num - required_frame_num
             start_idx = random.randint(0, random_range) if random_range > 0 else 0
             frame_indices = [start_idx + self.sample_stride*i for i in range(self.sample_n_frames)]
-
             try:
                 frames = video_reader.get_batch(frame_indices)
                 break

@@ -1,0 +1,8 @@
+**/__pycache__/
+*.log
+*.csv
+*.tar
+ckpts/
+*.pth
+*.pt
+Training/optical_flow_outputs/

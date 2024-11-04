@@ -15,6 +15,7 @@
 # limitations under the License.
 
 """Script to fine-tune Stable Video Diffusion."""
+import cupy
 import argparse
 import logging
 import math
@@ -22,7 +23,6 @@ import os
 import shutil
 from pathlib import Path
 from urllib.parse import urlparse
-
 import accelerate
 import numpy as np
 import PIL
@@ -871,7 +871,7 @@ def main():
     )
 
     test_dataset = WebVid10M(
-        meta_path='/apdcephfs/share_1290939/0_public_datasets/WebVid/metadata/metadata_2048_val.csv',
+        # meta_path='/apdcephfs/share_1290939/0_public_datasets/WebVid/metadata/metadata_2048_val.csv',
         sample_size=[args.height, args.width],
         sample_n_frames=args.num_frames, 
         sample_stride=args.sample_stride
@@ -1038,7 +1038,6 @@ def main():
                 continue
 
             with accelerator.accumulate(controlnet):
-
                 pixel_values = batch["pixel_values"].to(weight_dtype).to(
                     accelerator.device, non_blocking=True
                 )

@@ -994,7 +994,7 @@ def main():
     )
 
     test_dataset = WebVid10M(
-        meta_path='/apdcephfs/share_1290939/0_public_datasets/WebVid/metadata/metadata_2048_val.csv',
+        # meta_path='/apdcephfs/share_1290939/0_public_datasets/WebVid/metadata/metadata_2048_val.csv',
         sample_size=[args.height, args.width],
         sample_stride=args.sample_stride, 
         sample_n_frames=args.num_frames

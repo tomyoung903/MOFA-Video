@@ -1,6 +1,11 @@
-EXP_NAME="train_stage1"
+cd /home/tom/MOFA-Video/Training
 
-accelerate launch train_stage1.py \
+EXP_NAME="train_stage1"
+timestamp=$(date +%Y%m%d_%H%M%S)
+log_file="${EXP_NAME}_${timestamp}.log"
+# set cuda visible device
+export CUDA_VISIBLE_DEVICES=0
+nohup accelerate launch train_stage1.py \
  --pretrained_model_name_or_path="./ckpts/stable-video-diffusion-img2vid-xt-1-1" \
  --output_dir="logs/${EXP_NAME}/" \
  --width=384 \
@@ -17,4 +22,8 @@ accelerate launch train_stage1.py \
  --num_frames=25 \
  --gradient_checkpointing \
  --num_validation_images=4 \
- --sample_stride=4 \
+ --sample_stride=4 > ${log_file} 2>&1 &
+
+ cursor ${log_file}
+
+ 
