@@ -67,7 +67,8 @@ class WebVid10M(Dataset):
     
     def _get_video_path(self, sample):
         full_video_fp = sample['path']
-        rel_video_fp = '/'.join(full_video_fp.split('/')[2:])  # Remove top level folder
+        rel_video_fp = full_video_fp
+        # rel_video_fp = '/'.join(full_video_fp.split('/')[2:])  # Remove top level folder
         return full_video_fp, rel_video_fp
     
     def get_batch(self, index):

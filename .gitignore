@@ -6,3 +6,4 @@ ckpts/
 *.pth
 *.pt
 Training/optical_flow_outputs/
+.vscode/
