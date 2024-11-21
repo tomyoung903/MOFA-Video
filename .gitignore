@@ -7,3 +7,8 @@ ckpts/
 *.pt
 Training/optical_flow_outputs/
 .vscode/
+*.pyc
+MOFA-Video-Traj/ckpts
+MOFA-Video-Traj/models/cmp/experiments/semiauto_annot/resnet50_vip+mpii_liteflow/checkpoints
+MOFA-Video-Traj/outputs/
+Training/logs/

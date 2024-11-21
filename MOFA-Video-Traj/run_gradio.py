@@ -133,7 +133,7 @@ def init_models(pretrained_model_name_or_path, resume_from_checkpoint, weight_dt
 
             xformers_version = version.parse(xformers.__version__)
             if xformers_version == version.parse("0.0.16"):
-                print(
+                print(\
                     "xFormers 0.0.16 cannot be used for training in some GPUs. If you observe problems during training, please update xFormers to at least 0.0.17. See https://huggingface.co/docs/diffusers/main/en/optimization/xformers for more details."
                 )
             unet.enable_xformers_memory_efficient_attention()
@@ -835,4 +835,11 @@ with gr.Blocks() as demo:
 
     run_button.click(DragNUWA_net.run, [first_frame_path, tracking_points, inference_batch_size, motion_brush_mask, motion_brush_viz, ctrl_scale], [hint_image, output_video, output_flow, output_video_mp4, output_flow_mp4])
 
-    demo.launch(server_name="127.0.0.1", debug=True, server_port=9080)
+    if __name__ == "__main__":
+        demo.queue().launch(
+            server_name="127.0.0.1", 
+            server_port=9080,
+            share=False
+        )
+
+

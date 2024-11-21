@@ -8,7 +8,6 @@ from tqdm.auto import tqdm
 import os
 from train_stage1 import get_optical_flows
 from utils.flow_viz import save_vis_flow_tofile
-import torch.distributed as dist
 import csv
 
 FOREGROUND_SIZE_RATIO = 0.5 # Fraction of the image that is considered foreground in the center
@@ -42,25 +41,15 @@ def is_trackshot(
     flow_foreground_abs_sum = flow_foreground_abs.sum()
     flow_all_abs_sum = flow.abs().sum()
     
-    
     flow_background_abs_sum = flow_all_abs_sum - flow_foreground_abs_sum
     flow_background_abs_mean = flow_background_abs_sum / (flow.numel() - flow_foreground_abs.numel())
     is_trackshot = flow_foreground_abs_mean < foreground_motion_threshold and flow_background_abs_mean > background_motion_threshold
 
     return is_trackshot, flow_foreground_abs_mean, flow_background_abs_mean
 
-
-def setup():
-    dist.init_process_group("nccl")
-
-def cleanup():
-    dist.destroy_process_group()
-
 def main():
-    setup()
-    
-    local_rank = int(os.environ["LOCAL_RANK"])
-    world_size = int(os.environ["WORLD_SIZE"])
+    # Force CPU
+    device = torch.device('cpu')
     
     # Initialize model
     unimatch = UniMatch(feature_channels=128,
@@ -70,8 +59,9 @@ def main():
         ffn_dim_expansion=4,
         num_transformer_layers=6,
         reg_refine=True,
-        task='flow').to(local_rank)
-    checkpoint = torch.load('./train_utils/unimatch/pretrained/gmflow-scale2-regrefine6-mixdata-train320x576-4e7b215d.pth')
+        task='flow').to(device)
+    checkpoint = torch.load('./train_utils/unimatch/pretrained/gmflow-scale2-regrefine6-mixdata-train320x576-4e7b215d.pth', 
+                          map_location=device)
     unimatch.load_state_dict(checkpoint['model'])
     unimatch.eval()
     unimatch.requires_grad_(False)
@@ -84,38 +74,32 @@ def main():
         sample_stride=4
     )
     
-    sampler = torch.utils.data.distributed.DistributedSampler(
-        dataset,
-        num_replicas=world_size,
-        rank=local_rank
-    )
-    
     dataloader = torch.utils.data.DataLoader(
         dataset,
-        batch_size=2,
+        batch_size=1,
         num_workers=4,
-        sampler=sampler
+        shuffle=False
     )
 
     # Create output directory
-    if local_rank == 0:
-        os.makedirs('optical_flow_outputs', exist_ok=True)
+    os.makedirs('optical_flow_outputs', exist_ok=True)
+    
     # Create/open CSV file for writing results
-    csv_path = os.path.join('optical_flow_outputs', f'trackshot_results_rank{local_rank}.csv')
+    csv_path = os.path.join('optical_flow_outputs', 'trackshot_results.csv')
     csv_file = open(csv_path, 'w', newline='')
     csv_writer = csv.writer(csv_file)
     csv_writer.writerow(['video_name', 'is_trackshot', 'avg_flow_foreground', 'avg_flow_background'])
 
     # Process videos
-    for idx, batch in enumerate(tqdm(dataloader, disable=local_rank != 0)):
-        pixel_values = batch["pixel_values"].to(local_rank)
+    for idx, batch in enumerate(tqdm(dataloader)):
+        pixel_values = batch["pixel_values"].to(device)
         video_name = batch["video_name"][0]  # Get video name from batch
         
         # Get optical flows
         flows = get_optical_flows(unimatch, pixel_values)
 
         # Save flows as .png visualizations
-        flows = flows.squeeze() # Remove batch dim but keep on GPU/as tensor
+        flows = flows.squeeze() # Remove batch dim but keep as tensor
 
         is_trackshot_result, avg_flow_foreground, avg_flow_background = is_trackshot(
             flows, FOREGROUND_SIZE_RATIO, FOREGROUND_MOTION_THRESHOLD, BACKGROUND_MOTION_THRESHOLD
@@ -125,30 +109,15 @@ def main():
         csv_writer.writerow([
             video_name,
             int(is_trackshot_result),  # Convert bool to int for CSV
-            float(avg_flow_foreground.cpu()),  # Convert tensor to float
-            float(avg_flow_background.cpu())
+            float(avg_flow_foreground),  # Convert tensor to float
+            float(avg_flow_background)
         ])
     
     csv_file.close()
-    
     print(f"Results saved to {csv_path}")
-    
-    if local_rank == 0:
-        # combine all the results from each rank
-        all_results = []
-        for rank in range(world_size):
-            csv_path = os.path.join('optical_flow_outputs', f'trackshot_results_rank{rank}.csv')
-            all_results.append(pd.read_csv(csv_path))
-        combined_results = pd.concat(all_results, ignore_index=True)
-        combined_results.to_csv(os.path.join('optical_flow_outputs', 'trackshot_results.csv'), index=False)
-        print(f"Combined results saved to {os.path.join('optical_flow_outputs', 'trackshot_results.csv')}")
-    dist.barrier()
-    cleanup()
-    
-    
 
 if __name__ == "__main__":
     main()
 
 # example command:
-# torchrun --nproc_per_node=8 run_optical_flow_only.py
+# python run_optical_flow_cpu.py

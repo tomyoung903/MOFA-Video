@@ -127,11 +127,9 @@ def sample_inputs(unimatch, pixel_values):
     fb, fl, fc, fh, fw = flows.shape
     pb, pl, pc, ph, pw = pixel_values.shape
 
-
     mask = get_cmpsample_mask(flows)
     sparse_optical_flow = flows * mask
     
-
     if ph != 384 or pw != 384:
         flows_384 = F.interpolate(flows.flatten(0, 1), (384, 384)).reshape(fb, fl, 2, 384, 384)
 

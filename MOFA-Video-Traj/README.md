@@ -18,7 +18,7 @@ The final structure of checkpoints should be:
 
 
 ```text
-./ckpts/
+./ckpts
 |-- controlnet
 |   |-- config.json
 |   `-- diffusion_pytorch_model.safetensors
