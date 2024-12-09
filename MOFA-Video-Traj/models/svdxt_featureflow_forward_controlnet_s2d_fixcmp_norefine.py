@@ -102,7 +102,6 @@ class FlowControlNetConditioningEmbeddingSVD(nn.Module):
 
 
 
-
 class FlowControlNetFirstFrameEncoderLayer(nn.Module):
 
     def __init__(
@@ -124,7 +123,6 @@ class FlowControlNetFirstFrameEncoderLayer(nn.Module):
         embedding = F.silu(embedding)
 
         return embedding
-
 
 
 class FlowControlNetFirstFrameEncoder(nn.Module):
@@ -222,9 +220,11 @@ class FlowControlNet(ControlNetSDVModel):
     
     def get_warped_frames(self, first_frame, flows):
         '''
-            video_frame: [b, c, w, h]
+            video_frame: [b, c, w, h] # wrong
             flows: [b, t-1, c, w, h]
         '''
+        # print(flows.shape)
+        # exit()
         dtype = first_frame.dtype
         warped_frames = []
         for i in range(flows.shape[1]):

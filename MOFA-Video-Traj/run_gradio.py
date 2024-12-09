@@ -1,3 +1,6 @@
+import os
+os.environ['GRADIO_CACHE'] = './tmp/gradio'
+
 import gradio as gr
 import numpy as np
 import cv2
@@ -247,6 +250,12 @@ class Drag:
         sparse_optical_flow = sparse_optical_flow.flatten(0, 1)  # [b*13, 2, 256, 256]
         mask = mask.flatten(0, 1)  # [b*13, 2, 256, 256]
         cmp_flow = self.cmp.run(frames, sparse_optical_flow, mask)  # [b*13, 2, 256, 256]
+        # save to a file
+        np.save(f'cmp_flow_{hash(time.time())}.npy', cmp_flow.detach().cpu().numpy())
+        # import hashlib
+        # sha = hashlib.sha256(cmp_flow.detach().cpu().numpy().tobytes()).hexdigest()
+        # print(sha)
+        # exit()
 
         if brush_mask is not None:
             brush_mask = torch.from_numpy(brush_mask) / 255.
@@ -488,8 +497,19 @@ class Drag:
         
         original_width, original_height = self.width, self.height
 
-        input_all_points = tracking_points.constructor_args['value']
-        resized_all_points = [tuple([tuple([int(e1[0]*self.width/original_width), int(e1[1]*self.height/original_height)]) for e1 in e]) for e in input_all_points]
+        if isinstance(tracking_points, list):
+            input_all_points = tracking_points
+        else:
+            input_all_points = tracking_points.constructor_args['value']
+        resized_all_points = [
+            tuple(
+                [
+                    tuple([int(e1[0]*self.width/original_width), int(e1[1]*self.height/original_height)]) 
+                    for e1 in e
+                ]
+            )
+            for e in input_all_points
+        ]
         resized_all_points_384 = [tuple([tuple([int(e1[0]*384/original_width), int(e1[1]*384/original_height)]) for e1 in e]) for e in input_all_points]
 
         new_resized_all_points = []
@@ -526,7 +546,8 @@ class Drag:
             input_drag_384_outmask, input_mask_384_outmask = \
                 get_sparseflow_and_mask_forward(
                     resized_all_points_384_outmask, 
-                    self.model_length - 1, 384, 384
+                    self.model_length - 1, 
+                    384, 384
                 )
         else:
             input_drag_384_outmask, input_mask_384_outmask = \
@@ -651,7 +672,7 @@ with gr.Blocks() as demo:
         """
     )
 
-    target_size = 512
+    target_size = 384
     DragNUWA_net = Drag("cuda:0", target_size, target_size, 25)
     first_frame_path = gr.State()
     tracking_points = gr.State([])
@@ -836,10 +857,13 @@ with gr.Blocks() as demo:
     run_button.click(DragNUWA_net.run, [first_frame_path, tracking_points, inference_batch_size, motion_brush_mask, motion_brush_viz, ctrl_scale], [hint_image, output_video, output_flow, output_video_mp4, output_flow_mp4])
 
     if __name__ == "__main__":
+        import debugpy
+        debugpy.listen(("localhost", 5678))  # Use any available port, e.g., 5678
+        print("Waiting for debugger to attach...")
+        debugpy.wait_for_client()  # Optional: Pause execution until the debugger is attached
+
         demo.queue().launch(
             server_name="127.0.0.1", 
             server_port=9080,
             share=False
         )
-
-
